@@ -7,14 +7,19 @@
   <title>Perl Module XML::Node</title>
   <revhistory>
      <revision>
-        <revnumber>0.04</revnumber>
-        <date>20 Oct 1999</date>
-        <revremark>--The first version that's submitted to CPAN.</revremark>
+        <revnumber>0.09</revnumber>
+        <date>15 Nov 1999</date>
+        <revremark>--Add support to attributes</revremark>
      </revision>
      <revision>
         <revnumber>0.06</revnumber>
         <date>4 Nov 1999</date>
         <revremark>--Change to an object class</revremark>
+     </revision>
+     <revision>
+        <revnumber>0.04</revnumber>
+        <date>20 Oct 1999</date>
+        <revremark>--The first version that's submitted to CPAN.</revremark>
      </revision>
   </revhistory>
 </artheader>

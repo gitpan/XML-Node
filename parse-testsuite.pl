@@ -28,7 +28,7 @@ $p->register(">TestTalk>TestSuite>TestCase","end" => \& handle_testcase_end);
 $p->register(">TestTalk>TestSuite","end" => \& handle_testsuite_end);
 
 print "\nProcessing file [$xml_filename]...\n\n";
-$p->parse($xml_filename);
+$p->parsefile($xml_filename);
 
 
 sub handle_testcase_end

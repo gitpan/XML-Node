@@ -22,7 +22,11 @@ XML::Node - Node-based XML parsing: an simplified interface to XML::Parser
  $xml_node->register( $nodetype, $callback_type => \&callback_function );
  $xml_node->register( $nodetype, $callback_type => \$variable );
     
- $xml_node->parse( $xml_filename );
+ open(FOO, 'xmlgenerator |');
+ $p3->parse(*FOO);
+ close(FOO);
+
+ $xml_node->parsefile( $xml_filename );
 
 =head1 DESCRIPTION
 
@@ -88,15 +92,15 @@ Chang Liu <liu@ics.uci.edu>
 
 =head1 LAST MODIFIED
 
-$Date: 1999/11/15 20:09:46 $
+$Date: 2000/03/13 11:38:28 $
 
 =cut
 
 
 use Exporter;
-$VERSION = "0.09";
+$VERSION = "0.10";
 @ISA = ('Exporter');
-@EXPORT = qw (&register &parse);
+@EXPORT = qw (&register &parse &parsefile);
 
 
 use XML::Parser;
@@ -119,7 +123,7 @@ sub new{
 	START_HANDLERS => {},
 	END_HANDLERS   => {},
 	CHAR_HANDLERS  => {},
-	ATTR_HANDLERS  => {},
+       	ATTR_HANDLERS  => {},
 	CURRENT_TAG    => "",
 	CURRENT_PATH   => "",
     };
@@ -147,7 +151,8 @@ sub register
     }
 }
 
-sub parse
+
+sub parsefile
 {
     $self = shift or croak "XML::Node --self is expected as THE first parameter \&register.\n";
     my $xml_file = shift or croak "XML::Node --an XML filename is expected in \&parse.\n";
@@ -168,16 +173,44 @@ sub handle_char_$myinstance
 {
     &handle_char($myinstance, \@_);
 }
-
 \$XML::Node::parser = new XML::Parser(Handlers => { Start => \\& handle_start_$myinstance,
 					End =>   \\& handle_end_$myinstance,
 					Char =>  \\& handle_char_$myinstance } );
 
 };
-
    #carp "[[[[[[[[[[[[[[[[$my_handlers]]]]]]]]]]]]]]";
     eval ($my_handlers);
     $parser->parsefile("$xml_file");
+}
+
+sub parse
+{
+    $self = shift or croak "XML::Node --self is expected as THE first parameter \&register.\n";
+
+    $myinstance = $self->{INSTANCE};
+    carp "XML::Node - invoking parser [$myinstance]" if $ENV{DEBUG};
+
+my $my_handlers = qq {
+sub handle_start_$myinstance
+{
+    &handle_start($myinstance, \@_);
+}
+sub handle_end_$myinstance
+{
+    &handle_end($myinstance, \@_);
+}
+sub handle_char_$myinstance
+{
+    &handle_char($myinstance, \@_);
+}
+\$XML::Node::parser = new XML::Parser(Handlers => { Start => \\& handle_start_$myinstance,
+					End =>   \\& handle_end_$myinstance,
+					Char =>  \\& handle_char_$myinstance } );
+
+};
+   #carp "[[[[[[[[[[[[[[[[$my_handlers]]]]]]]]]]]]]]";
+    eval ($my_handlers);
+    $parser->parse(shift);
 }
 
 sub handle_start
@@ -222,18 +255,22 @@ sub handle_end
 
 #    carp("handle_end called [$myinstance] [$element]\n");
     
+    $selves[$myinstance]->{CURRENT_TAG} = $element;
+
     if ($selves[$myinstance]->{END_HANDLERS}->{$selves[$myinstance]->{CURRENT_TAG}}) {
 	handle($p, $element, $selves[$myinstance]->{END_HANDLERS}->{$selves[$myinstance]->{CURRENT_TAG}});
     }
     if ($selves[$myinstance]->{END_HANDLERS}->{$selves[$myinstance]->{CURRENT_PATH}}) {
 	handle($p, $element, $selves[$myinstance]->{END_HANDLERS}->{$selves[$myinstance]->{CURRENT_PATH}});
-    }
+    } 
     $selves[$myinstance]->{CURRENT_PATH} =~ /(.*)>/;
     $selves[$myinstance]->{CURRENT_PATH} = $1;
     $selves[$myinstance]->{CURRENT_TAG}  = $';
     if ($element ne $selves[$myinstance]->{CURRENT_TAG}) {
 	carp "start-tag <$selves[$myinstance]->{CURRENT_TAG}> doesn't match end-tag <$element>. Is this XML file well-formed?\n";
     }
+    $selves[$myinstance]->{CURRENT_PATH} =~ /(.*)>/;
+    $selves[$myinstance]->{CURRENT_TAG}  = $';
 }
 
 sub handle_char
@@ -268,7 +305,8 @@ sub handle
 #	$element =~ /(\s*)$/;
 #	$element = $`;
 	if (! defined $$handler) {
-	    carp ("XML::Node - SCALAR handler undefined when processing [$element]");
+	    $$handler = "";
+	    #carp ("XML::Node - SCALAR handler undefined when processing [$element]");
 	}
 	$$handler = $$handler . $element;
     } else {

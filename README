@@ -1,4 +1,4 @@
-			XML::Node Version 0.09
+			XML::Node Version 0.10
 
 Here is a quick but complete example to show you how XML::Node promises
 to keep your XML processing scripts short and clear.
@@ -27,7 +27,7 @@ $p->register(">Orders>Order>Quantity","char" => \$quantity);
 $p->register(">Orders>Order","end" => \&handle_order_end);
 
 print "Processing file [orders.xml]...\n";
-$p->parse("orders.xml");
+$p->parsefile("orders.xml");
 
 sub handle_order_end
 {
@@ -38,7 +38,7 @@ sub handle_order_end
 }
 
 ---------------------------------------------------------------------
-Copyright (c)  1999 Chang  Liu 
+Copyright (c)  1999,2000 Chang  Liu 
 All rights  reserved.  
 
 This program is  free software; you can redistribute  it and/or modify
@@ -112,6 +112,6 @@ install by typing:
 After this, you  may use "man XML::Node" to view the  man page of this
 module.
 
-  --Chang Liu (liu@ics.uci.edu)
+  --Chang Liu (liu@ics.uci.edu | changliu@acm.org)
 
 
