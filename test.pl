@@ -8,7 +8,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..3\n"; }
+BEGIN { $| = 1; print "1..4\n"; }
 END {print "not ok 1\n" unless $loaded;}
 
 
@@ -31,5 +31,8 @@ print "invoking parse-orders.pl...\n";
 require "parse-orders.pl";
 print "ok 3\n";
 
+print "invoking parse-foo.pl...\n";
+require "parse-foo.pl";
+print "ok 4\n";
 
 

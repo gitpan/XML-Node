@@ -10,4 +10,4 @@ parse-foo.pl
 foo.xml
 orders.xml
 test.xml
-XML::Node.sgml
+XML-Node.sgml

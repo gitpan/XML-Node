@@ -1,4 +1,4 @@
-			XML::Node Version 0.10
+			XML::Node Version 0.11
 
 Here is a quick but complete example to show you how XML::Node promises
 to keep your XML processing scripts short and clear.
@@ -38,7 +38,7 @@ sub handle_order_end
 }
 
 ---------------------------------------------------------------------
-Copyright (c)  1999,2000 Chang  Liu 
+Copyright (c)  1999,2000,2001 Chang  Liu 
 All rights  reserved.  
 
 This program is  free software; you can redistribute  it and/or modify
@@ -111,6 +111,16 @@ install by typing:
 
 After this, you  may use "man XML::Node" to view the  man page of this
 module.
+
+
+---------------------------------------------------------------------
+When testing the package, make sure "make install" is called every 
+time after "Node.pm" is modified.
+---------------------------------------------------------------------
+To rebuild the package: 
+	edit MANIFEST
+	perl Makefile.PL
+	make dist or nmake dist (make sure tar and gzip are on path.)
 
   --Chang Liu (liu@ics.uci.edu | changliu@acm.org)
 

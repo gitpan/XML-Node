@@ -1,5 +1,5 @@
 <Orders>
-  There are the orders.
+  These are the orders:
   <Order ID="0008" Date="11/14/1999">
     <Item>A Book</Item>
     <Quantity>1</Quantity>

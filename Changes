@@ -1,5 +1,8 @@
 Revision history for Perl extension XML::Node
-
+0.11  Dec 10 Mon 2:07:06 2001
+	- added support for relative paths         
+	- rename XML::Node.sgml to XML-Node.sgml so that Windows people can 
+          unzip the package.
 0.10  Mar 13 Mon 2:07:06
 	- Bug fixs
 	- Add suport for IO::Handle

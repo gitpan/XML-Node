@@ -1,7 +1,1 @@
-<foo>
-  x
-  <p>
-    <pp>a</pp>
-   </p>
-   y
-</foo>
+<foo type="SomeThing">x<bar><p>a</p></bar>y</foo>

@@ -74,17 +74,13 @@ This module uses XML::Parser.
 
 Examples "test.pl" and "parse_orders.pl" come with this perl module.
 
-=head1 BUG REPORT
-
-Please report bugs to http://belmont-shores.ics.uci.edu/bugzilla
-
 =head1 SEE ALSO
 
 XML::Parser
 
 =head1 NOTE
 
-When you register a variable, XML::Node appends strings found to that variable. So please be sure to clear that variable when needed.
+When you register a variable, XML::Node appends strings found to that variable. So please be sure to clear that variable before it is used again.
 
 =head1 AUTHORS
 
@@ -92,13 +88,13 @@ Chang Liu <liu@ics.uci.edu>
 
 =head1 LAST MODIFIED
 
-$Date: 2000/03/13 11:38:28 $
+$Date: 2001/12/10 11:38:28 $
 
 =cut
 
 
 use Exporter;
-$VERSION = "0.10";
+$VERSION = "0.11";
 @ISA = ('Exporter');
 @EXPORT = qw (&register &parse &parsefile);
 
@@ -219,32 +215,60 @@ sub handle_start
     my $p = shift;
     my $element = shift;
 
-#    carp("handle_start called [$myinstance] [$element]\n");
     
-    my $current_path = $selves[$myinstance]->{CURRENT_PATH} = $selves[$myinstance]->{CURRENT_PATH} . ">" .  $element;
+    my $current_path = $selves[$myinstance]->{CURRENT_PATH} = 
+    	$selves[$myinstance]->{CURRENT_PATH} . ">" .  $element;
     my $current_tag = $selves[$myinstance]->{CURRENT_TAG} = $element;
 
     my $attr;
     my $value;
 
+#    carp("handle_start called [$myinstance] [$element] [$current_path]\n");
+    
     while (defined ($attr = shift ) ) {
 	if (! defined ($value = shift)) {
 	    croak ("value for attribute [$attr] of element [$element] is not returned by XML::Parser\n");
 	}
-	my $attr_path = "$current_path:$attr";
 #	carp("Attribute [$attr] of element [$element] found with value [$value] attr_path:[$attr_path]\n");
+        my @array = split(/>/, $current_path);
+        my $current_relative_path = "$current_tag:$attr";
+        my $i;
+	if ($selves[$myinstance]->{ATTR_HANDLERS}->{$current_relative_path}) {
+	    handle($p, $value, $selves[$myinstance]->{ATTR_HANDLERS}->{$current_relative_path});
+	}
+        for ($i=$#array-1;$i>=1;$i--)
+        { # call all relative paths 
+    	    $current_relative_path = $array[$i] . ">" . $current_relative_path;
+  	    if ($selves[$myinstance]->{ATTR_HANDLERS}->{$current_relative_path}) {
+	        handle($p, $value, $selves[$myinstance]->{ATTR_HANDLERS}->{$current_relative_path});
+	    }
+    	}
+	my $attr_path = "$current_path:$attr";
 	if ($selves[$myinstance]->{ATTR_HANDLERS}->{$attr_path}) {
 	    handle($p, $value, $selves[$myinstance]->{ATTR_HANDLERS}->{$attr_path});
 	}
     }
 
+    my @array = split(/>/, $current_path);
+    my $current_relative_path = $current_tag;
+    my $i;
+
     if ($selves[$myinstance]->{START_HANDLERS}->{$current_tag}) {
 	handle($p, $element, $selves[$myinstance]->{START_HANDLERS}->{$current_tag});
     }
+#carp("--Begin loop\n");
+    for ($i=$#array-1;$i>=1;$i--)
+    { # call all relative paths 
+	$current_relative_path = $array[$i] . ">" . $current_relative_path;
+#carp("Array size is $#array, \$i is $i, current_relative_path is $current_relative_path\n");
+        if ($selves[$myinstance]->{START_HANDLERS}->{$current_relative_path}) {
+    	    handle($p, $element, $selves[$myinstance]->{START_HANDLERS}->{$current_relative_path});
+        }
+    }
+#carp("--End loop\n");
     if ($selves[$myinstance]->{START_HANDLERS}->{$current_path}) {
 	handle($p, $element, $selves[$myinstance]->{START_HANDLERS}->{$current_path});
     }
-
 }
 
 sub handle_end
@@ -252,17 +276,31 @@ sub handle_end
     my $myinstance = shift;
     my $p = shift;
     my $element = shift;
+    my $current_path = $selves[$myinstance]->{CURRENT_PATH};
 
 #    carp("handle_end called [$myinstance] [$element]\n");
     
     $selves[$myinstance]->{CURRENT_TAG} = $element;
 
+    my @array = split(/>/, $current_path);
+    my $current_relative_path = $element;
+    my $i;
+    
     if ($selves[$myinstance]->{END_HANDLERS}->{$selves[$myinstance]->{CURRENT_TAG}}) {
 	handle($p, $element, $selves[$myinstance]->{END_HANDLERS}->{$selves[$myinstance]->{CURRENT_TAG}});
+    }
+    for ($i=$#array-1;$i>=1;$i--)
+    { # call all relative paths 
+	$current_relative_path = $array[$i] . ">" . $current_relative_path;
+#carp("Array size is $#array, \$i is $i, current_relative_path is $current_relative_path\n");
+        if ($selves[$myinstance]->{END_HANDLERS}->{$current_relative_path}) {
+    	    handle($p, $element, $selves[$myinstance]->{END_HANDLERS}->{$current_relative_path});
+        }
     }
     if ($selves[$myinstance]->{END_HANDLERS}->{$selves[$myinstance]->{CURRENT_PATH}}) {
 	handle($p, $element, $selves[$myinstance]->{END_HANDLERS}->{$selves[$myinstance]->{CURRENT_PATH}});
     } 
+    
     $selves[$myinstance]->{CURRENT_PATH} =~ /(.*)>/;
     $selves[$myinstance]->{CURRENT_PATH} = $1;
     $selves[$myinstance]->{CURRENT_TAG}  = $';
@@ -278,11 +316,23 @@ sub handle_char
     my $myinstance = shift;
     my $p = shift;
     my $element = shift;
+    my $current_path = $selves[$myinstance]->{CURRENT_PATH};
     
 #    carp("handle_char called [$myinstance] [$element]\n");
 
+    my @array = split(/>/, $current_path);
+    my $current_relative_path = $element;
+    my $i;
+
     if ($selves[$myinstance]->{CHAR_HANDLERS}->{$selves[$myinstance]->{CURRENT_TAG}}) {
 	handle($p, $element, $selves[$myinstance]->{CHAR_HANDLERS}->{$selves[$myinstance]->{CURRENT_TAG}});
+    }
+    for ($i=$#array-1;$i>=1;$i--)
+    { # call all relative paths 
+	$current_relative_path = $array[$i] . ">" . $current_relative_path;
+        if ($selves[$myinstance]->{CHAR_HANDLERS}->{$current_relative_path}) {
+    	    handle($p, $element, $selves[$myinstance]->{CHAR_HANDLERS}->{$current_relative_path});
+        }
     }
     if ($selves[$myinstance]->{CHAR_HANDLERS}->{$selves[$myinstance]->{CURRENT_PATH}}) {
 	handle($p, $element, $selves[$myinstance]->{CHAR_HANDLERS}->{$selves[$myinstance]->{CURRENT_PATH}});
@@ -297,7 +347,7 @@ sub handle
 
     my $handler_type = ref($handler);
     if ($handler_type eq "CODE") {
-	&$handler($p,$element);
+	&$handler($p,$element);  # call the handler function
     } elsif ($handler_type eq "SCALAR")  {
 #	chomp($element);
 #	$element =~ /^(\s*)/;
@@ -308,7 +358,7 @@ sub handle
 	    $$handler = "";
 	    #carp ("XML::Node - SCALAR handler undefined when processing [$element]");
 	}
-	$$handler = $$handler . $element;
+	$$handler = $$handler . $element;  #append the content to the handler variable
     } else {
 	carp "XML::Node -unknown handler type [$handler_type]\n";
 	exit;
