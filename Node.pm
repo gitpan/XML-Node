@@ -36,18 +36,22 @@ the content of a XML node will be appended to that variable automatically.
 
 Subroutine register accepts both absolute and relative node registrations.
 
-Example of absolute path registration: 
+Here is an example of absolute path registration: 
 
- 1. register(">TestCase>Name", "start" => \& handle_TestCase_Name_start);
+ 1. register(">TestCase>Name", "start" => \&handle_TestCase_Name_start);
 
-Example of single node name registration:
+Here are examples of single node name registration:
 
- 2. register( "Name", "start" => \& handle_Name_start);
- 3. register( "Name", "end"   => \& handle_Name_end);
- 4. register( "Name", "char"  => \& handle_Name_char);
+ 2. register( "Name", "start" => \&handle_Name_start);
+ 3. register( "Name", "end"   => \&handle_Name_end);
+ 4. register( "Name", "char"  => \&handle_Name_char);
+
+Here is an example of attribute registration:
+
+ 5. register(">TestCase:Author", "attr" => \$testcase_author);
 
 Abosolute path trigger condition is recommended because a "Name" tage could appear in different
-places and stands for differe name. 
+places and stands for differe names. 
 
 Example:
 
@@ -84,13 +88,13 @@ Chang Liu <liu@ics.uci.edu>
 
 =head1 LAST MODIFIED
 
-11/04/1999
+$Date: 1999/11/15 20:09:46 $
 
 =cut
 
 
 use Exporter;
-$VERSION = 0.06;
+$VERSION = "0.09";
 @ISA = ('Exporter');
 @EXPORT = qw (&register &parse);
 
@@ -115,6 +119,7 @@ sub new{
 	START_HANDLERS => {},
 	END_HANDLERS   => {},
 	CHAR_HANDLERS  => {},
+	ATTR_HANDLERS  => {},
 	CURRENT_TAG    => "",
 	CURRENT_PATH   => "",
     };
@@ -135,6 +140,8 @@ sub register
 	$self->{END_HANDLERS}->{$node} = $handler;
     } elsif ($type eq "char") { 
 	$self->{CHAR_HANDLERS}->{$node} = $handler;
+    } elsif ($type eq "attr") { 
+	$self->{ATTR_HANDLERS}->{$node} = $handler;
     } else {
 	croak "XML::Node --unknown handler type $type for node $node\n";
     }
@@ -181,14 +188,30 @@ sub handle_start
 
 #    carp("handle_start called [$myinstance] [$element]\n");
     
-    $selves[$myinstance]->{CURRENT_PATH} = $selves[$myinstance]->{CURRENT_PATH} . ">" .  $element;
-    $selves[$myinstance]->{CURRENT_TAG} = $element;
-    if ($selves[$myinstance]->{START_HANDLERS}->{$selves[$myinstance]->{CURRENT_TAG}}) {
-	handle($p, $element, $selves[$myinstance]->{START_HANDLERS}->{$selves[$myinstance]->{CURRENT_TAG}});
+    my $current_path = $selves[$myinstance]->{CURRENT_PATH} = $selves[$myinstance]->{CURRENT_PATH} . ">" .  $element;
+    my $current_tag = $selves[$myinstance]->{CURRENT_TAG} = $element;
+
+    my $attr;
+    my $value;
+
+    while (defined ($attr = shift ) ) {
+	if (! defined ($value = shift)) {
+	    croak ("value for attribute [$attr] of element [$element] is not returned by XML::Parser\n");
+	}
+	my $attr_path = "$current_path:$attr";
+#	carp("Attribute [$attr] of element [$element] found with value [$value] attr_path:[$attr_path]\n");
+	if ($selves[$myinstance]->{ATTR_HANDLERS}->{$attr_path}) {
+	    handle($p, $value, $selves[$myinstance]->{ATTR_HANDLERS}->{$attr_path});
+	}
     }
-    if ($selves[$myinstance]->{START_HANDLERS}->{$selves[$myinstance]->{CURRENT_PATH}}) {
-	handle($p, $element, $selves[$myinstance]->{START_HANDLERS}->{$selves[$myinstance]->{CURRENT_PATH}});
+
+    if ($selves[$myinstance]->{START_HANDLERS}->{$current_tag}) {
+	handle($p, $element, $selves[$myinstance]->{START_HANDLERS}->{$current_tag});
     }
+    if ($selves[$myinstance]->{START_HANDLERS}->{$current_path}) {
+	handle($p, $element, $selves[$myinstance]->{START_HANDLERS}->{$current_path});
+    }
+
 }
 
 sub handle_end

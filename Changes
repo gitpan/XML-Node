@@ -7,3 +7,5 @@ Revision history for Perl extension XML::Node
 0.06  Thu Nov  4 17:26:25 PST 1999
 	- Change to object style.
 	- Allow multiple instances running simultaneously
+0.09  Mon Nov 15 11:29:53 PST 1999
+	- Add support for attributes

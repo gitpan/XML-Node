@@ -4,6 +4,8 @@ MANIFEST
 Makefile.PL
 Node.pm
 test.pl
-test.xml
 parse-orders.pl
+parse-testsuite.pl
 orders.xml
+test.xml
+XML::Node.sgml

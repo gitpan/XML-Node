@@ -1,6 +1,7 @@
-<TestSuite>
+<TestTalk>
+  <TestSuite>
 <!--  This test suite has all the test case that work -->
-   <SuiteName>ClientTestSuite1</SuiteName>
+   <Name>ClientTestSuite1</Name>
    <TestCase>
       <Name>SimpleText</Name>
       <Properties>SanityCheck</Properties>
@@ -63,3 +64,4 @@
       </Action-GetPage>
    </TestCase>
 </TestSuite>
+</TestTalk>
