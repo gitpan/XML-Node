@@ -1,3 +1,10 @@
+# Copyright (c)  1999 Chang  Liu 
+# All rights  reserved.  
+#
+# This program is  free software; you can redistribute  it and/or modify
+# it under the same terms as Perl itself.
+
+
 package XML::Node;
 
 #use strict;
@@ -5,36 +12,35 @@ package XML::Node;
 
 =head1 NAME
 
-XML::Node::register - register a call back function or a variable for a particular node
-
-XML::Node::parse - parse an XML file
+XML::Node - Node-based XML parsing: an simplified interface to XML::Parser
 
 =head1 SYNOPSIS
 
-    use XML::Node;
+ use XML::Node;
 
-    register( $nodetype, $callback_type => \&callback_function );
-    register( $nodetype, $callback_type => \$variable );
+ $xml_node = new XML::Node;
+ $xml_node->register( $nodetype, $callback_type => \&callback_function );
+ $xml_node->register( $nodetype, $callback_type => \$variable );
     
-    parse( $xml_filename );
+ $xml_node->parse( $xml_filename );
 
 =head1 DESCRIPTION
 
 If you are only interested in processing certain nodes in an XML file, this 
-module can help you.
+module can help you simplify your Perl scripts significantly.
 
 The XML::Node module allows you to register callback functions or variables for 
 any  XML node. If you register a call back function, it will be called when
 the node of the type you specified are encountered. If you register a variable, 
 the content of a XML node will be appended to that variable automatically. 
 
-Subroutine &register accepts both absolute and relative node registrations.
+Subroutine register accepts both absolute and relative node registrations.
 
 Example of absolute path registration: 
 
  1. register(">TestCase>Name", "start" => \& handle_TestCase_Name_start);
 
-Example of single node registration:
+Example of single node name registration:
 
  2. register( "Name", "start" => \& handle_Name_start);
  3. register( "Name", "end"   => \& handle_Name_end);
@@ -58,7 +64,15 @@ This module uses XML::Parser.
 
 =head1 EXAMPLE
 
-File "test.pl", which comes with this perl module, has an example.
+Examples "test.pl" and "parse_orders.pl" come with this perl module.
+
+=head1 BUG REPORT
+
+Please report bugs to http://belmont-shores.ics.uci.edu/bugzilla
+
+=head1 SEE ALSO
+
+XML::Parser
 
 =head1 NOTE
 
@@ -70,108 +84,148 @@ Chang Liu <liu@ics.uci.edu>
 
 =head1 LAST MODIFIED
 
-10/20/1999
+11/04/1999
 
 =cut
 
 
 use Exporter;
-$VERSION = 0.04;
+$VERSION = 0.06;
 @ISA = ('Exporter');
 @EXPORT = qw (&register &parse);
 
 
 use XML::Parser;
+use Carp;
 
 
 if ($ENV{DEBUG}) {
     print "DEBUG:XML::Node.pm VERSION $VERSION\n";
 }
 
-my %start_handlers = ();
-my %end_handlers   = ();
-my %char_handlers  = ();
-my $current_tag = "";    # for example, "Name"
-my $current_path = "";   # for example, ">TestSuite>TestCase>Name";
+my $instance = 0;
+my @selves = ();
+my $myinstance;
+
+sub new{
+    my $class = shift;
+    
+    my $self = {
+	INSTANCE       => $instance,
+	START_HANDLERS => {},
+	END_HANDLERS   => {},
+	CHAR_HANDLERS  => {},
+	CURRENT_TAG    => "",
+	CURRENT_PATH   => "",
+    };
+    bless $self, $class;
+    $selves[$instance++] = $self;
+    return $self;
+}
 
 sub register
 {
-    my $node = shift or die "XML::Node --a node path is expected as arg1 in \&register.\n";
-    my $type = shift or die "XML::Node --node type is expected as arg2 in \&register.\n";
-    my $handler = shift or die "XML::Node --a handler is expected as arg3 in \&register.\n";
+    $self = shift or croak "XML::Node --self is expected as THE first parameter \&register.\n";
+    my $node = shift or croak "XML::Node --a node path is expected as arg1 in \&register.\n";
+    my $type = shift or croak "XML::Node --node type is expected as arg2 in \&register.\n";
+    my $handler = shift or croak "XML::Node --a handler is expected as arg3 in \&register.\n";
     if ($type eq "start") {
-	$start_handlers{$node} = $handler;
+	$self->{START_HANDLERS}->{$node} = $handler;
     } elsif ($type eq "end") {
-	$end_handlers{$node} = $handler;
+	$self->{END_HANDLERS}->{$node} = $handler;
     } elsif ($type eq "char") { 
-	$char_handlers{$node} = $handler;
+	$self->{CHAR_HANDLERS}->{$node} = $handler;
     } else {
-	die "XML::Node --unknown handler type $type for node $node\n";
+	croak "XML::Node --unknown handler type $type for node $node\n";
     }
 }
 
 sub parse
 {
-    my $xml_file = shift or die "XML::Node --an XML filename is expected in \&parse.\n";
+    $self = shift or croak "XML::Node --self is expected as THE first parameter \&register.\n";
+    my $xml_file = shift or croak "XML::Node --an XML filename is expected in \&parse.\n";
 
-    my $p2 = new XML::Parser(Handlers => { Start => \& handle_start,
-					   End =>   \& handle_end,
-					   Char =>  \& handle_char } );
-    $p2->parsefile("$xml_file");
+    $myinstance = $self->{INSTANCE};
+    carp "XML::Node - invoking parser [$myinstance]" if $ENV{DEBUG};
+
+my $my_handlers = qq {
+sub handle_start_$myinstance
+{
+    &handle_start($myinstance, \@_);
+}
+sub handle_end_$myinstance
+{
+    &handle_end($myinstance, \@_);
+}
+sub handle_char_$myinstance
+{
+    &handle_char($myinstance, \@_);
 }
 
+\$XML::Node::parser = new XML::Parser(Handlers => { Start => \\& handle_start_$myinstance,
+					End =>   \\& handle_end_$myinstance,
+					Char =>  \\& handle_char_$myinstance } );
+
+};
+
+   #carp "[[[[[[[[[[[[[[[[$my_handlers]]]]]]]]]]]]]]";
+    eval ($my_handlers);
+    $parser->parsefile("$xml_file");
+}
 
 sub handle_start
 {
+    my $myinstance = shift;
     my $p = shift;
     my $element = shift;
+
+#    carp("handle_start called [$myinstance] [$element]\n");
     
-    $current_path = $current_path . ">" .  $element;
-    $current_tag = $element;
-    if ($start_handlers{$current_tag}) {
-#      debug("calling start handler of $current_tag");
-	handle($p, $element, $start_handlers{$current_tag});
+    $selves[$myinstance]->{CURRENT_PATH} = $selves[$myinstance]->{CURRENT_PATH} . ">" .  $element;
+    $selves[$myinstance]->{CURRENT_TAG} = $element;
+    if ($selves[$myinstance]->{START_HANDLERS}->{$selves[$myinstance]->{CURRENT_TAG}}) {
+	handle($p, $element, $selves[$myinstance]->{START_HANDLERS}->{$selves[$myinstance]->{CURRENT_TAG}});
     }
-    if ($start_handlers{$current_path}) {
-#      debug("calling start handler of $current_path");
-	handle($p, $element, $start_handlers{$current_path});
+    if ($selves[$myinstance]->{START_HANDLERS}->{$selves[$myinstance]->{CURRENT_PATH}}) {
+	handle($p, $element, $selves[$myinstance]->{START_HANDLERS}->{$selves[$myinstance]->{CURRENT_PATH}});
     }
 }
 
 sub handle_end
 {
+    my $myinstance = shift;
     my $p = shift;
     my $element = shift;
+
+#    carp("handle_end called [$myinstance] [$element]\n");
     
-#  debug ("end of $element, current_path: [$current_path] current_tag: [$current_tag]");
-    if ($end_handlers{$current_tag}) {
-#      debug("calling end handler of $current_tag");
-	handle($p, $element, $end_handlers{$current_tag});
+    if ($selves[$myinstance]->{END_HANDLERS}->{$selves[$myinstance]->{CURRENT_TAG}}) {
+	handle($p, $element, $selves[$myinstance]->{END_HANDLERS}->{$selves[$myinstance]->{CURRENT_TAG}});
     }
-    if ($end_handlers{$current_path}) {
-#      debug("calling end handler of $current_path");
-	handle($p, $element, $end_handlers{$current_path});
+    if ($selves[$myinstance]->{END_HANDLERS}->{$selves[$myinstance]->{CURRENT_PATH}}) {
+	handle($p, $element, $selves[$myinstance]->{END_HANDLERS}->{$selves[$myinstance]->{CURRENT_PATH}});
     }
-    $current_path =~ /(.*)>/;
-    $current_path = $1;
-    $current_tag = $';
-    if ($element ne $current_tag) {
-	print "XML::Node --ERROR:start-tag <$current_tag> doesn't match end-tag <$element>. Is this XML file well-formed?\n";
+    $selves[$myinstance]->{CURRENT_PATH} =~ /(.*)>/;
+    $selves[$myinstance]->{CURRENT_PATH} = $1;
+    $selves[$myinstance]->{CURRENT_TAG}  = $';
+    if ($element ne $selves[$myinstance]->{CURRENT_TAG}) {
+	carp "start-tag <$selves[$myinstance]->{CURRENT_TAG}> doesn't match end-tag <$element>. Is this XML file well-formed?\n";
     }
 }
 
 sub handle_char
 {
+    my $myinstance = shift;
     my $p = shift;
     my $element = shift;
     
-    if ($char_handlers{$current_tag}) {
-#      debug("calling char handler $char_handlers{$current_tag} of $current_tag");
-	handle($p, $element, $char_handlers{$current_tag});
+#    carp("handle_char called [$myinstance] [$element]\n");
+
+    if ($selves[$myinstance]->{CHAR_HANDLERS}->{$selves[$myinstance]->{CURRENT_TAG}}) {
+	handle($p, $element, $selves[$myinstance]->{CHAR_HANDLERS}->{$selves[$myinstance]->{CURRENT_TAG}});
     }
-    if ($char_handlers{$current_path}) {
-#      debug("calling char handler $char_handlers{$current_path} of $current_path");
-	handle($p, $element, $char_handlers{$current_path});
+    if ($selves[$myinstance]->{CHAR_HANDLERS}->{$selves[$myinstance]->{CURRENT_PATH}}) {
+	handle($p, $element, $selves[$myinstance]->{CHAR_HANDLERS}->{$selves[$myinstance]->{CURRENT_PATH}});
     }
 }
 
@@ -185,14 +239,17 @@ sub handle
     if ($handler_type eq "CODE") {
 	&$handler($p,$element);
     } elsif ($handler_type eq "SCALAR")  {
-	chomp($element);
-	$element =~ /^(\s*)/;
-	$element = $';
-	$element =~ /(\s*)$/;
-	$element = $`;
+#	chomp($element);
+#	$element =~ /^(\s*)/;
+#	$element = $';
+#	$element =~ /(\s*)$/;
+#	$element = $`;
+	if (! defined $$handler) {
+	    carp ("XML::Node - SCALAR handler undefined when processing [$element]");
+	}
 	$$handler = $$handler . $element;
     } else {
-	print "XML::Node --unknown handler type [$handler_type]\n";
+	carp "XML::Node -unknown handler type [$handler_type]\n";
 	exit;
     }
 }

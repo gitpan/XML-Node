@@ -5,3 +5,5 @@ Makefile.PL
 Node.pm
 test.pl
 test.xml
+parse-orders.pl
+orders.xml

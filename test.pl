@@ -1,3 +1,5 @@
+#!/usr/bin/perl -w
+#
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl test.pl'
 
@@ -21,20 +23,46 @@ print "ok 1\n";
 # (correspondingly "not ok 13") depending on the success of chunk 13
 # of the test code):
 
-my $suite_name;
-my $testcase_name;
+#
+# The following sample script calculates how many test cases there are in 
+#   a test suite XML file.
+#
+# The XML file name can be passed as a parameter. Example:
+#   perl test.pl test.xml
+#
 
-register(">TestSuite>SuiteName","char" => \$ suite_name);
-register(">TestSuite>TestCase>Name","char" => \$testcase_name);
-register(">TestSuite>TestCase","end" => \& handle_testcase_end);
+my $suite_name = "";
+my $testcase_name = "";
+my $xml_filename = "test.xml";
+my $testcase_no = 0;
+my $arg1 = shift;
 
-parse("test.xml");
+if ($arg1) {
+    $xml_filename = $arg1;
+}
+
+$p = XML::Node->new();
+
+$p->register(">TestSuite>SuiteName","char" => \$ suite_name);
+$p->register(">TestSuite>TestCase>Name","char" => \$testcase_name);
+$p->register(">TestSuite>TestCase","end" => \& handle_testcase_end);
+$p->register(">TestSuite","end" => \& handle_testsuite_end);
+
+print "\nProcessing file [$xml_filename]...\n";
+$p->parse($xml_filename);
 
 print "ok 2\n";
 
 sub handle_testcase_end
 {
-    print "Test Case [$testcase_name] found in Test Suite [$suite_name]\n";
+    print "Found test case [$testcase_name]\n";
+    $testcase_name = "";
+    $testcase_no ++;
+}
+
+sub handle_testsuite_end
+{
+    print "\n--There are $testcase_no test cases in test suite [$suite_name]\n\n";
     $testcase_name = "";
 }
 

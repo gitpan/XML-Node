@@ -1,0 +1,18 @@
+<Orders>
+  <Order>
+    <Item>A Book</Item>
+    <Quantity>1</Quantity>
+    <TagsThatIDontCare>Something</TagsThatIDontCare>
+   </Order>
+   <TagsThatIDontCare>Blah Blah</TagsThatIDontCare>
+   <Order>
+    <Item>A Pencil</Item>
+    <Quantity>2</Quantity>
+    <TagsThatIDontCare>Something</TagsThatIDontCare>
+   </Order>
+   <Order>
+    <Item>A Pen</Item>
+    <Quantity>4</Quantity>
+    <TagsThatIDontCare>Something</TagsThatIDontCare>
+   </Order>
+</Orders>
